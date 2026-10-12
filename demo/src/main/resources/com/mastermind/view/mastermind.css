@@ -1,0 +1,118 @@
+/* ===== Mise en page ===== */
+
+.plateau {
+    -fx-background-color: #f4ede1;
+    -fx-padding: 24;
+    -fx-spacing: 16;
+    -fx-alignment: top-center;
+    -fx-fill-width: false;
+}
+
+.plateau-jeu {
+    -fx-background-color: #8d6e63;
+    -fx-background-radius: 10;
+    -fx-padding: 14;
+    -fx-spacing: 14;
+}
+
+.tentatives {
+    -fx-spacing: 4;
+}
+
+.ligne-pions {
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+}
+
+.ligne-tentative {
+    -fx-background-color: #795548;
+    -fx-background-radius: 6;
+    -fx-padding: 4 10;
+    -fx-spacing: 18;
+    -fx-alignment: center-left;
+}
+
+.ligne-secrete {
+    -fx-background-color: #4e342e;
+    -fx-background-radius: 6;
+    -fx-padding: 6 10;
+}
+
+.statut {
+    -fx-font-size: 14px;
+}
+
+.commandes {
+    -fx-spacing: 8;
+    -fx-alignment: center;
+}
+
+.champ-texte {
+    -fx-pref-column-count: 12;
+}
+
+/* ===== Case (pion) ===== */
+
+.case {
+    -fx-min-width: 28;
+    -fx-pref-width: 28;
+    -fx-max-width: 28;
+    -fx-min-height: 28;
+    -fx-pref-height: 28;
+    -fx-max-height: 28;
+    -fx-background-color: #5d4037;
+    -fx-background-radius: 100;
+    -fx-border-color: #3e2723;
+    -fx-border-width: 2;
+    -fx-border-radius: 100;
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.5), 6, 0, 0, 2);
+}
+
+/* Une pseudo-classe par valeur de l'enum Couleur (voir PseudoClasses). */
+.case:rouge  { -fx-background-color: #e53935; }
+.case:bleu   { -fx-background-color: #1e88e5; }
+.case:vert   { -fx-background-color: #43a047; }
+.case:jaune  { -fx-background-color: #fdd835; }
+.case:orange { -fx-background-color: #fb8c00; }
+.case:violet { -fx-background-color: #8e24aa; }
+
+.case:rouge, .case:bleu, .case:vert, .case:jaune, .case:orange, .case:violet {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 1);
+}
+
+/* ===== Indices ===== */
+
+.grille-indices {
+    -fx-hgap: 3;
+    -fx-vgap: 3;
+}
+
+.indice {
+    -fx-min-width: 12;
+    -fx-pref-width: 12;
+    -fx-max-width: 12;
+    -fx-min-height: 12;
+    -fx-pref-height: 12;
+    -fx-max-height: 12;
+    -fx-background-color: #5d4037;
+    -fx-background-radius: 100;
+    -fx-border-color: #3e2723;
+    -fx-border-width: 1;
+    -fx-border-radius: 100;
+}
+
+.indice:bien-place {
+    -fx-background-color: #d50000;
+}
+
+.indice > .croix {
+    -fx-shape: "M2,0 L5,3 L8,0 L10,2 L7,5 L10,8 L8,10 L5,7 L2,10 L0,8 L3,5 L0,2 Z";
+    -fx-background-color: #fafafa;
+    -fx-max-width: 7;
+    -fx-max-height: 7;
+    -fx-opacity: 0;
+}
+
+.indice:mal-place > .croix {
+    -fx-opacity: 1;
+}
