@@ -1,5 +1,7 @@
 package com.mastermind.view;
 
+import com.mastermind.model.partie.Difficulté;
+
 /**
  * Intentions que le joueur peut exprimer depuis la vue.
  * La vue ne connaît que ce contrat ; le contrôleur l'implémente.
@@ -12,5 +14,5 @@ public interface ActionsJoueur {
      *               vide (ou blancs) pour une combinaison imprévisible
      * @throws IllegalArgumentException si {@code graine} n'est ni vide ni un entier {@code long}
      */
-    void lancerPartie(String graine);
+    void lancerPartie(String graine, Difficulté diffculte);
 }
