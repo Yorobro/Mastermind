@@ -1,8 +1,6 @@
 package com.mastermind.view;
 
-import com.mastermind.model.partie.Configuration;
-import com.mastermind.model.partie.EtatPartie;
-import com.mastermind.model.partie.Statut;
+import com.mastermind.model.partie.*;
 import com.mastermind.view.component.atoms.Bouton;
 import com.mastermind.view.component.atoms.ChampTexte;
 import com.mastermind.view.component.atoms.StatutPartie;
@@ -11,8 +9,11 @@ import com.mastermind.view.component.organisms.LigneTentative;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+
+import javafx.collections.FXCollections;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.control.ComboBox;
 
 /**
  * Vue JavaFX : assemble les composants et se met à jour à chaque notification du modèle.
@@ -29,6 +30,16 @@ public final class PlateauView extends VBox implements VuePartie {
     private final StatutPartie statut = new StatutPartie();
     private final ChampTexte champGraine = new ChampTexte("Graine (optionnelle)", t -> t.matches(FORMAT_GRAINE));
     private final LignePions ligneSecrete;
+
+    /**
+     * Mis en place du choix de la difficulté.
+     */
+    private final ComboBox<Difficulté> comboDifficulte = new ComboBox<>(
+            FXCollections.observableArrayList(
+                    new Facile(),
+                    new Difficile()
+            )
+    );
     /**
      * Index 0 = premier essai, affiché tout en bas du plateau.
      */
@@ -97,15 +108,20 @@ public final class PlateauView extends VBox implements VuePartie {
 
     /**
      * Assemble la barre de commandes : champ de graine et bouton de lancement,
-     * tous deux reliés à {@link ActionsJoueur#lancerPartie(String)}.
+     * tous deux reliés à {@link ActionsJoueur#lancerPartie(String,com.mastermind.model.partie.Difficulté)}.
      *
      * @param actions destinataire des actions du joueur
      * @return la barre de commandes
      */
     private HBox creerCommandes(ActionsJoueur actions) {
-        champGraine.setOnValider(actions::lancerPartie);
-        HBox commandes = new HBox(champGraine,
-                new Bouton("Lancer partie", () -> actions.lancerPartie(champGraine.getText())));
+        champGraine.setOnValider(graine ->
+                actions.lancerPartie(graine, comboDifficulte.getValue())
+        );
+        Bouton boutonLancer = new Bouton("Lancer partie", () ->
+                actions.lancerPartie(champGraine.getText(), comboDifficulte.getValue())
+        );
+
+        HBox commandes = new HBox(champGraine, comboDifficulte, boutonLancer);
         commandes.getStyleClass().add("commandes");
         return commandes;
     }

@@ -3,7 +3,9 @@ package com.mastermind.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.mastermind.model.partie.Difficulté;
 import com.mastermind.model.partie.EtatPartie;
+import com.mastermind.model.partie.Facile;
 import com.mastermind.model.partie.PartieModel;
 import com.mastermind.observer.Observateur;
 import java.util.ArrayList;
@@ -42,24 +44,26 @@ class PartieControllerTest {
 
     private final ModeleEspion modele = new ModeleEspion();
     private final PartieController controleur = new PartieController(modele);
+    //test
+    private Facile Facile=new Facile();
 
     @Test
     void saisieVide_lanceSansGraine() {
-        controleur.lancerPartie("  ");
+        controleur.lancerPartie("  ",Facile);
 
         assertEquals(List.of(OptionalLong.empty()), modele.graines);
     }
 
     @Test
     void saisieNumerique_lanceAvecCetteGraine() {
-        controleur.lancerPartie("42");
+        controleur.lancerPartie("42",Facile);
 
         assertEquals(List.of(OptionalLong.of(42)), modele.graines);
     }
 
     @Test
     void saisieNonNumerique_estRefuseeSansLancer() {
-        assertThrows(IllegalArgumentException.class, () -> controleur.lancerPartie("abc"));
+        assertThrows(IllegalArgumentException.class, () -> controleur.lancerPartie("abc",Facile));
 
         assertEquals(List.of(), modele.graines);
     }

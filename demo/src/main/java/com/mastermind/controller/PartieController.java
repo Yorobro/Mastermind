@@ -1,5 +1,6 @@
 package com.mastermind.controller;
 
+import com.mastermind.model.partie.Difficulté;
 import com.mastermind.model.partie.PartieModel;
 import com.mastermind.view.ActionsJoueur;
 import java.util.Objects;
@@ -23,7 +24,7 @@ public class PartieController implements ActionsJoueur {
     }
 
     @Override
-    public void lancerPartie(String graine) {
+    public void lancerPartie(String graine, Difficulté difficulté) {
         model.lancer(versGraine(graine));
     }
 
