@@ -1,6 +1,7 @@
 package com.mastermind;
 
 import com.mastermind.controller.PartieController;
+import com.mastermind.data.FichierJsonPartie;
 import com.mastermind.model.generation.GenerateurAleatoire;
 import com.mastermind.model.partie.Difficulte;
 import com.mastermind.model.partie.Partie;
@@ -18,7 +19,8 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) {
         PartieModel model = new Partie(Difficulte.parDefaut().configuration(), new GenerateurAleatoire());
-        PartieController controller = new PartieController(model);
+        FichierJsonPartie fichiersDeSauvegarde = new FichierJsonPartie();
+        PartieController controller = new PartieController(model, fichiersDeSauvegarde, fichiersDeSauvegarde);
         PlateauView vue = new PlateauView(controller);
 
         model.ajouterObservateur(vue);

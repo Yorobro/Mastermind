@@ -2,6 +2,8 @@ package com.mastermind.view;
 
 import com.mastermind.model.combinaison.Couleur;
 import com.mastermind.model.partie.Difficulte;
+import com.mastermind.model.sauvegarde.ErreurSauvegarde;
+import java.nio.file.Path;
 
 /**
  * Intentions que le joueur peut exprimer depuis la vue.
@@ -33,8 +35,23 @@ public interface ActionsJoueur {
      */
     void valider();
 
-    void sauvegarder();
-    void charger();
+    /**
+     * Enregistre la partie, en cours ou terminée, dans le fichier choisi.
+     *
+     * @param fichier emplacement de la sauvegarde ; un fichier existant est remplacé
+     * @throws IllegalStateException si aucune partie n'a été lancée
+     * @throws ErreurSauvegarde      si le fichier ne peut pas être écrit
+     */
+    void sauvegarder(Path fichier) throws ErreurSauvegarde;
+
+    /**
+     * Remplace la partie courante par celle enregistrée dans le fichier choisi.
+     *
+     * @param fichier sauvegarde à reprendre
+     * @throws ErreurSauvegarde si le fichier est illisible ou ne contient pas une partie possible ;
+     *                          la partie courante reste alors inchangée
+     */
+    void charger(Path fichier) throws ErreurSauvegarde;
 
     /**
      * Pose une couleur dans la prochaine case libre de la tentative en cours.
