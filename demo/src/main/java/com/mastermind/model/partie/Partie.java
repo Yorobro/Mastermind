@@ -18,30 +18,36 @@ import java.util.stream.Stream;
  */
 public class Partie implements PartieModel {
     private final Sujet<EtatPartie> sujet = new Sujet<>();
-    private final Configuration configuration;
     private final GenerateurCombinaison generateur;
+    /**
+     * Paramètres de la partie en cours, fixés à chaque lancement.
+     */
+    private Configuration configuration;
     /**
      * Combinaison à deviner. Gardée ici et non dans {@link #etat} : l'état publié la cache tant que la partie dure.
      */
     private Combinaison secrete = Combinaison.vide();
-    private EtatPartie etat = EtatPartie.initial();
+    private EtatPartie etat;
 
     /**
      * Crée une partie non commencée.
      *
-     * @param configuration paramètres de la partie
-     * @param generateur    source de la combinaison secrète à chaque lancement
+     * @param configurationInitiale dimensions annoncées tant qu'aucune partie n'est lancée
+     * @param generateur            source de la combinaison secrète à chaque lancement
      * @throws NullPointerException si l'un des arguments est {@code null}
      */
-    public Partie(Configuration configuration, GenerateurCombinaison generateur) {
-        this.configuration = Objects.requireNonNull(configuration);
+    public Partie(Configuration configurationInitiale, GenerateurCombinaison generateur) {
+        this.configuration = Objects.requireNonNull(configurationInitiale);
         this.generateur = Objects.requireNonNull(generateur);
+        this.etat = EtatPartie.initial(configurationInitiale);
     }
 
     @Override
-    public void lancer(OptionalLong graine) {
-        secrete = genererSecrete(graine);
-        changerEtat(EtatPartie.nouvellePartie());
+    public void lancer(Configuration nouvelleConfiguration, OptionalLong graine) {
+        Objects.requireNonNull(nouvelleConfiguration);
+        secrete = genererSecrete(nouvelleConfiguration, graine);
+        configuration = nouvelleConfiguration;
+        changerEtat(EtatPartie.nouvellePartie(configuration));
     }
 
     @Override
@@ -74,6 +80,7 @@ public class Partie implements PartieModel {
         List<Combinaison> tentatives = ajouter(etat.tentatives(), proposition);
         Statut statut = statutApres(proposition, tentatives.size());
         changerEtat(new EtatPartie(
+            configuration,
             statut,
             statut.estTerminee() ? secrete : Combinaison.vide(),
             tentatives,
@@ -101,15 +108,16 @@ public class Partie implements PartieModel {
      * Demande une combinaison secrète au générateur et vérifie qu'elle respecte la configuration,
      * pour que le problème soit signalé au lancement et non à la première tentative.
      *
-     * @param graine graine transmise au générateur
+     * @param configurationVisee configuration de la partie à lancer
+     * @param graine             graine transmise au générateur
      * @return la combinaison secrète
      * @throws IllegalStateException si le générateur ne renvoie pas une combinaison de la longueur demandée
      */
-    private Combinaison genererSecrete(OptionalLong graine) {
-        Combinaison generee = generateur.generer(configuration.longueur(), graine);
-        if (generee == null || generee.taille() != configuration.longueur()) {
-            throw new IllegalStateException("le générateur doit renvoyer une combinaison de "
-                    + configuration.longueur() + " pions");
+    private Combinaison genererSecrete(Configuration configurationVisee, OptionalLong graine) {
+        int longueur = configurationVisee.longueur();
+        Combinaison generee = generateur.generer(longueur, graine);
+        if (generee == null || generee.taille() != longueur) {
+            throw new IllegalStateException("le générateur doit renvoyer une combinaison de " + longueur + " pions");
         }
         return generee;
     }

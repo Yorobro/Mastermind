@@ -13,11 +13,13 @@ public interface PartieModel extends Observable<EtatPartie> {
     /**
      * Démarre une nouvelle partie en repartant de zéro : rien de la partie précédente n'est conservé.
      *
-     * @param graine graine de la combinaison secrète, ou vide pour une combinaison imprévisible
+     * @param configuration dimensions de la nouvelle partie (longueur, nombre d'essais)
+     * @param graine        graine de la combinaison secrète, ou vide pour une combinaison imprévisible
+     * @throws NullPointerException  si {@code configuration} est {@code null}
      * @throws IllegalStateException si la combinaison secrète obtenue n'a pas la longueur attendue ;
      *                               l'état de la partie reste alors inchangé
      */
-    void lancer(OptionalLong graine);
+    void lancer(Configuration configuration, OptionalLong graine);
 
     /**
      * Pose une couleur dans la prochaine case libre de la tentative en cours.
