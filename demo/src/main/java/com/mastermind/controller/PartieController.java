@@ -1,7 +1,7 @@
 package com.mastermind.controller;
 
 import com.mastermind.model.combinaison.Couleur;
-import com.mastermind.model.partie.Difficulté;
+import com.mastermind.model.partie.Difficulte;
 import com.mastermind.model.partie.PartieModel;
 import com.mastermind.view.ActionsJoueur;
 import java.util.Objects;
@@ -25,8 +25,33 @@ public class PartieController implements ActionsJoueur {
     }
 
     @Override
-    public void lancerPartie(String graine, Difficulté difficulté) {
-        model.lancer(versGraine(graine));
+    public void lancerPartie(String graine, Difficulte difficulte) {
+        model.lancer(difficulte.configuration(), versGraine(graine));
+    }
+
+    @Override
+    public void choisirCouleur(Couleur couleur) {
+        model.poserCouleur(couleur);
+    }
+
+    @Override
+    public void effacer() {
+        model.retirerCouleur();
+    }
+
+    @Override
+    public void valider() {
+        model.validerTentative();
+    }
+
+    @Override
+    public void sauvegarder() {
+        // TODO
+    }
+
+    @Override
+    public void charger() {
+        // TODO
     }
 
     /**
@@ -40,34 +65,4 @@ public class PartieController implements ActionsJoueur {
         String texte = saisie.strip();
         return texte.isEmpty() ? OptionalLong.empty() : OptionalLong.of(Long.parseLong(texte));
     }
-    /**
-     * Action du bouton de couleur sur le plateau
-     */
-    @Override
-    public void choisirCouleur(Couleur couleur) {
-        // TODO
-    }
-    /**
-     * Actions des boutons du plateaux
-      */
-    @Override
-    public void effacer() {
-        // TODO
-    }
-
-    @Override
-    public void valider() {
-        // TODO
-    }
-
-    @Override
-    public void sauvegarder() {
-        // TODO
-    }
-
-    @Override
-    public void charger() {
-        // TODO
-    }
-
 }
