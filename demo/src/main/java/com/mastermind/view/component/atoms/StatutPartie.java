@@ -24,6 +24,8 @@ public final class StatutPartie extends Label {
         setText(switch (statut) {
             case NON_COMMENCEE -> "Aucune partie en cours";
             case EN_COURS -> "Partie en cours";
+            case GAGNEE -> "Partie gagnée";
+            case PERDUE -> "Partie perdue";
         });
     }
 }

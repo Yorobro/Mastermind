@@ -3,6 +3,7 @@ package com.mastermind.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.mastermind.model.combinaison.Couleur;
 import com.mastermind.model.partie.Difficulté;
 import com.mastermind.model.partie.EtatPartie;
 import com.mastermind.model.partie.Facile;
@@ -26,6 +27,18 @@ class PartieControllerTest {
         @Override
         public void lancer(OptionalLong graine) {
             graines.add(graine);
+        }
+
+        @Override
+        public void poserCouleur(Couleur couleur) {
+        }
+
+        @Override
+        public void retirerCouleur() {
+        }
+
+        @Override
+        public void validerTentative() {
         }
 
         @Override
