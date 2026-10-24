@@ -5,6 +5,7 @@ import com.mastermind.model.combinaison.Indice;
 import com.mastermind.model.partie.Configuration;
 import com.mastermind.model.partie.EtatPartie;
 import com.mastermind.model.partie.Statut;
+import com.mastermind.model.sauvegarde.ErreurSauvegarde;
 import com.mastermind.view.component.atoms.Bouton;
 import com.mastermind.view.component.atoms.BoutonCouleur;
 import com.mastermind.view.component.atoms.ChampTexte;
@@ -12,8 +13,10 @@ import com.mastermind.view.component.atoms.ChoixDifficulte;
 import com.mastermind.view.component.atoms.StatutPartie;
 import com.mastermind.view.component.molecules.LignePions;
 import com.mastermind.view.component.organisms.LigneTentative;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -35,9 +38,11 @@ public final class PlateauView extends VBox implements VuePartie {
     private final ChampTexte champGraine = new ChampTexte("Graine (optionnelle)", t -> t.matches(FORMAT_GRAINE));
     private final ChoixDifficulte choixDifficulte = new ChoixDifficulte();
     private final VBox plateauJeu = new VBox();
+    private final DialoguesFichier dialogues = new DialoguesFichier();
     private final HBox palette;
     private final Bouton boutonEffacer;
     private final Bouton boutonValider;
+    private final Bouton boutonSauvegarder;
 
     /**
      * Dimensions du plateau actuellement dessiné ; {@code null} avant le premier affichage.
@@ -62,6 +67,7 @@ public final class PlateauView extends VBox implements VuePartie {
         palette = creerPalette(actions);
         boutonEffacer = new Bouton("Effacer", actions::effacer);
         boutonValider = new Bouton("Valider", actions::valider);
+        boutonSauvegarder = new Bouton("Sauvegarder", () -> sauvegarder(actions));
         getChildren().addAll(
                 plateauJeu,
                 statut,
@@ -106,7 +112,7 @@ public final class PlateauView extends VBox implements VuePartie {
      * Redimensionne la fenêtre à son contenu, pour que toutes les lignes restent visibles.
      */
     private void ajusterFenetre() {
-        Window fenetre = getScene() == null ? null : getScene().getWindow();
+        Window fenetre = fenetre();
         if (fenetre != null) {
             fenetre.sizeToScene();
         }
@@ -146,6 +152,54 @@ public final class PlateauView extends VBox implements VuePartie {
         palette.setDisable(!enCours || nbPionsPoses == longueur);
         boutonEffacer.setDisable(!enCours || nbPionsPoses == 0);
         boutonValider.setDisable(!enCours || nbPionsPoses < longueur);
+        boutonSauvegarder.setDisable(etat.statut() == Statut.NON_COMMENCEE);
+    }
+
+    /**
+     * Demande où sauvegarder, puis transmet le fichier choisi ; une erreur est affichée au joueur.
+     *
+     * @param actions destinataire des actions du joueur
+     */
+    private void sauvegarder(ActionsJoueur actions) {
+        Optional<Path> fichier = dialogues.demanderEmplacementSauvegarde(fenetre());
+        executerSurFichier(fichier, actions::sauvegarder, "Sauvegarde impossible");
+    }
+
+    /**
+     * Demande quelle sauvegarde charger, puis transmet le fichier choisi ; une erreur est affichée au joueur.
+     *
+     * @param actions destinataire des actions du joueur
+     */
+    private void charger(ActionsJoueur actions) {
+        Optional<Path> fichier = dialogues.demanderFichierACharger(fenetre());
+        executerSurFichier(fichier, actions::charger, "Chargement impossible");
+    }
+
+    /**
+     * Exécute une opération sur le fichier choisi, sauf si le joueur a annulé.
+     *
+     * @param fichier     fichier choisi, ou vide si le joueur a annulé
+     * @param operation   sauvegarde ou chargement
+     * @param titreErreur résumé affiché si l'opération échoue
+     */
+    private void executerSurFichier(Optional<Path> fichier, OperationFichier operation, String titreErreur) {
+        if (fichier.isEmpty()) {
+            return;
+        }
+        try {
+            operation.executer(fichier.get());
+        } catch (ErreurSauvegarde erreur) {
+            dialogues.afficherErreur(fenetre(), titreErreur, erreur);
+        }
+    }
+
+    /**
+     * Renvoie la fenêtre qui contient le plateau, parent des dialogues.
+     *
+     * @return la fenêtre, ou {@code null} si le plateau n'est pas encore affiché
+     */
+    private Window fenetre() {
+        return getScene() == null ? null : getScene().getWindow();
     }
 
     /**
@@ -210,8 +264,7 @@ public final class PlateauView extends VBox implements VuePartie {
 
 
     /**
-     * Assemble la barre des actions sur la tentative en cours : effacer, valider et sauvegarder,
-     * appel au contrôleur .
+     * Assemble la barre d'actions : effacer et valider la tentative, sauvegarder et charger la partie.
      *
      * @param actions destinataire des actions du joueur
      * @return la barre d'actions
@@ -220,12 +273,24 @@ public final class PlateauView extends VBox implements VuePartie {
         HBox actionsTentative = new HBox(
                 boutonEffacer,
                 boutonValider,
-                new Bouton("Sauvegarder", actions::sauvegarder),
-                new Bouton("Charger", actions::charger)
+                boutonSauvegarder,
+                new Bouton("Charger", () -> charger(actions))
         );
         actionsTentative.getStyleClass().add("actions-tentative");
         return actionsTentative;
     }
 
-
+    /**
+     * Sauvegarde ou chargement appliqué au fichier choisi par le joueur.
+     */
+    @FunctionalInterface
+    private interface OperationFichier {
+        /**
+         * Applique l'opération au fichier.
+         *
+         * @param fichier fichier choisi par le joueur
+         * @throws ErreurSauvegarde si l'opération échoue
+         */
+        void executer(Path fichier) throws ErreurSauvegarde;
+    }
 }
