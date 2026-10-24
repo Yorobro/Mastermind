@@ -1,7 +1,9 @@
 package com.mastermind.view;
 
+import com.mastermind.model.combinaison.Couleur;
 import com.mastermind.model.partie.*;
 import com.mastermind.view.component.atoms.Bouton;
+import com.mastermind.view.component.atoms.BoutonCouleur;
 import com.mastermind.view.component.atoms.ChampTexte;
 import com.mastermind.view.component.atoms.StatutPartie;
 import com.mastermind.view.component.molecules.LignePions;
@@ -26,6 +28,10 @@ public final class PlateauView extends VBox implements VuePartie {
      * Chiffres uniquement, 18 au plus : toujours convertible en {@code long}.
      */
     private static final String FORMAT_GRAINE = "\\d{0,18}";
+    /**
+     * Couleurs proposées dans la palette ; chacune correspond à une classe CSS {@code couleur-<nom>}.
+     */
+    private static final List<String> COULEURS = List.of("rouge", "bleu", "vert", "jaune", "orange", "violet");
 
     private final StatutPartie statut = new StatutPartie();
     private final ChampTexte champGraine = new ChampTexte("Graine (optionnelle)", t -> t.matches(FORMAT_GRAINE));
@@ -46,7 +52,7 @@ public final class PlateauView extends VBox implements VuePartie {
     private final List<LigneTentative> tentatives;
 
     /**
-     * Construit le plateau vide : ligne secrète, tentatives, statut et commandes.
+     * Construit le plateau vide : ligne secrète, tentatives, statut, commandes, palette et actions.
      *
      * @param actions       destinataire des actions du joueur
      * @param configuration dimensions du plateau (longueur des lignes, nombre d'essais)
@@ -56,7 +62,13 @@ public final class PlateauView extends VBox implements VuePartie {
         getStyleClass().add("plateau");
         ligneSecrete = creerLigneSecrete(configuration);
         tentatives = creerTentatives(configuration);
-        getChildren().addAll(creerPlateauJeu(), statut, creerCommandes(actions));
+        getChildren().addAll(
+                creerPlateauJeu(),
+                statut,
+                creerCommandes(actions),
+                creerPalette(actions),
+                creerBoutonsAction(actions)
+        );
     }
 
     @Override
@@ -120,9 +132,44 @@ public final class PlateauView extends VBox implements VuePartie {
         Bouton boutonLancer = new Bouton("Lancer partie", () ->
                 actions.lancerPartie(champGraine.getText(), comboDifficulte.getValue())
         );
-
         HBox commandes = new HBox(champGraine, comboDifficulte, boutonLancer);
         commandes.getStyleClass().add("commandes");
         return commandes;
     }
+
+    /**
+     * Assemble la palette : un bouton par couleur.
+     *
+     * @return la palette de couleurs
+     */
+    private HBox creerPalette(ActionsJoueur actions) {
+        HBox palette = new HBox();
+        palette.getStyleClass().add("palette");
+        for (Couleur couleur : Couleur.values()) {
+            palette.getChildren().add(new BoutonCouleur(couleur, () ->
+                    actions.choisirCouleur(couleur)
+            ));
+        }
+        return palette;
+    }
+
+
+    /**
+     * Assemble la barre des actions sur la tentative en cours : effacer, valider et sauvegarder,
+     * appel au contrôleur .
+     *
+     * @return la barre d'actions
+     */
+    private HBox creerBoutonsAction(ActionsJoueur actions) {
+        HBox actionsTentative = new HBox(
+                new Bouton("Effacer", actions::effacer),
+                new Bouton("Valider", actions::valider),
+                new Bouton("Sauvegarder", actions::sauvegarder),
+                new Bouton("Charger", actions::charger)
+        );
+        actionsTentative.getStyleClass().add("actions-tentative");
+        return actionsTentative;
+    }
+
+
 }
