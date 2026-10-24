@@ -2,7 +2,7 @@ package com.mastermind;
 
 import com.mastermind.controller.PartieController;
 import com.mastermind.model.generation.GenerateurAleatoire;
-import com.mastermind.model.partie.Configuration;
+import com.mastermind.model.partie.Difficulte;
 import com.mastermind.model.partie.Partie;
 import com.mastermind.model.partie.PartieModel;
 import com.mastermind.view.PlateauView;
@@ -17,10 +17,9 @@ import javafx.stage.Stage;
 public class Main extends Application {
     @Override
     public void start(Stage stage) {
-        Configuration configuration = Configuration.STANDARD;
-        PartieModel model = new Partie(configuration, new GenerateurAleatoire());
+        PartieModel model = new Partie(Difficulte.parDefaut().configuration(), new GenerateurAleatoire());
         PartieController controller = new PartieController(model);
-        PlateauView vue = new PlateauView(controller, configuration);
+        PlateauView vue = new PlateauView(controller);
 
         model.ajouterObservateur(vue);
         vue.mettreAJour(model.getEtat());
