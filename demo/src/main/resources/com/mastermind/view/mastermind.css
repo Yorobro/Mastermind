@@ -70,15 +70,41 @@
 
 /* Une pseudo-classe par valeur de l'enum Couleur (voir PseudoClasses). */
 .case:rouge  { -fx-background-color: #e53935; }
-.case:bleu   { -fx-background-color: #1e88e5; }
-.case:vert   { -fx-background-color: #43a047; }
-.case:jaune  { -fx-background-color: #fdd835; }
+.case:bleu  { -fx-background-color: #1e88e5; }
+.case:vert  { -fx-background-color: #43a047; }
+.case:jaune { -fx-background-color: #fdd835; }
 .case:orange { -fx-background-color: #fb8c00; }
 .case:violet { -fx-background-color: #8e24aa; }
-
 .case:rouge, .case:bleu, .case:vert, .case:jaune, .case:orange, .case:violet {
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 1);
 }
+palette {
+    -fx-spacing: 8;
+    -fx-alignment: center;
+}
+
+.bouton-couleur {
+    -fx-padding: 6;
+}
+
+.bouton-couleur:hover {
+    -fx-cursor: hand;
+}
+
+.pastille {
+    -fx-stroke: #3e2723;
+    -fx-stroke-width: 2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 1);
+}
+
+.pastille:rouge  { -fx-fill: #e53935; }
+.pastille:bleu   { -fx-fill: #1e88e5; }
+.pastille:vert   { -fx-fill: #43a047; }
+.pastille:jaune  { -fx-fill: #fdd835; }
+.pastille:orange { -fx-fill: #fb8c00; }
+.pastille:violet { -fx-fill: #8e24aa; }
+
+
 
 /* ===== Indices ===== */
 
@@ -116,3 +142,5 @@
 .indice:mal-place > .croix {
     -fx-opacity: 1;
 }
+
+

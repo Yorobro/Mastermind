@@ -1,5 +1,6 @@
 package com.mastermind.view;
 
+import com.mastermind.model.combinaison.Couleur;
 import com.mastermind.model.partie.Difficulté;
 
 /**
@@ -15,4 +16,10 @@ public interface ActionsJoueur {
      * @throws IllegalArgumentException si {@code graine} n'est ni vide ni un entier {@code long}
      */
     void lancerPartie(String graine, Difficulté diffculte);
+
+    void effacer();
+    void valider();
+    void sauvegarder();
+    void charger();
+    void choisirCouleur(Couleur couleur);
 }
