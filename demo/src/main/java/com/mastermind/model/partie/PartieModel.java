@@ -13,11 +13,13 @@ public interface PartieModel extends Observable<EtatPartie> {
     /**
      * Démarre une nouvelle partie en repartant de zéro : rien de la partie précédente n'est conservé.
      *
-     * @param graine graine de la combinaison secrète, ou vide pour une combinaison imprévisible
+     * @param configuration dimensions de la nouvelle partie (longueur, nombre d'essais)
+     * @param graine        graine de la combinaison secrète, ou vide pour une combinaison imprévisible
+     * @throws NullPointerException  si {@code configuration} est {@code null}
      * @throws IllegalStateException si la combinaison secrète obtenue n'a pas la longueur attendue ;
      *                               l'état de la partie reste alors inchangé
      */
-    void lancer(OptionalLong graine);
+    void lancer(Configuration configuration, OptionalLong graine);
 
     /**
      * Pose une couleur dans la prochaine case libre de la tentative en cours.
@@ -43,6 +45,26 @@ public interface PartieModel extends Observable<EtatPartie> {
      * @throws IllegalStateException si la partie n'est pas en cours ou si la proposition est incomplète
      */
     void validerTentative();
+
+    /**
+     * Prend une photo complète de la partie, combinaison secrète comprise, pour la sauvegarder.
+     *
+     * @return la partie à sauvegarder, en cours ou terminée
+     * @throws IllegalStateException si aucune partie n'a été lancée
+     */
+    PartieSauvegardee exporter();
+
+    /**
+     * Remplace la partie courante par une partie sauvegardée, en rejouant ses tentatives :
+     * statut et indices sont recalculés avec les règles du jeu. Les observateurs sont notifiés une fois.
+     *
+     * @param sauvegarde partie à reprendre
+     * @throws NullPointerException     si {@code sauvegarde} est {@code null}
+     * @throws IllegalArgumentException si la sauvegarde ne correspond à aucune partie possible
+     *                                  (par exemple une tentative après la victoire) ; la partie courante
+     *                                  reste alors inchangée
+     */
+    void restaurer(PartieSauvegardee sauvegarde);
 
     /**
      * Renvoie l'état courant, celui transmis lors de la dernière notification.

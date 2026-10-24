@@ -40,6 +40,17 @@ public final class LigneTentative extends HBox {
     }
 
     /**
+     * Affiche la tentative en cours de saisie, sans indice : elle n'est pas encore évaluée.
+     *
+     * @param couleurs pions déjà posés, de gauche à droite
+     * @throws IllegalArgumentException si les couleurs dépassent la longueur de la ligne
+     */
+    public void afficherProposition(List<Couleur> couleurs) {
+        pions.afficher(couleurs);
+        indices.vider();
+    }
+
+    /**
      * Vide les pions et les indices.
      */
     public void vider() {

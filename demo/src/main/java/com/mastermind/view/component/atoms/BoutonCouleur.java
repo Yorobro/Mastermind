@@ -1,7 +1,6 @@
 package com.mastermind.view.component.atoms;
 
 import com.mastermind.model.combinaison.Couleur;
-import java.util.Objects;
 import javafx.scene.control.Button;
 import javafx.scene.shape.Circle;
 
