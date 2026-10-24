@@ -90,6 +90,22 @@ public class Partie implements PartieModel {
     }
 
     @Override
+    public PartieSauvegardee exporter() {
+        if (etat.statut() == Statut.NON_COMMENCEE) {
+            throw new IllegalStateException("Aucune partie à sauvegarder : la partie n'est pas lancée");
+        }
+        return new PartieSauvegardee(configuration, secrete, etat.tentatives(), etat.proposition());
+    }
+
+    @Override
+    public void restaurer(PartieSauvegardee sauvegarde) {
+        Partie rejouee = rejouer(Objects.requireNonNull(sauvegarde));
+        configuration = rejouee.configuration;
+        secrete = rejouee.secrete;
+        changerEtat(rejouee.etat);
+    }
+
+    @Override
     public EtatPartie getEtat() {
         return etat;
     }
@@ -102,6 +118,30 @@ public class Partie implements PartieModel {
     @Override
     public void retirerObservateur(Observateur<? super EtatPartie> observateur) {
         sujet.retirerObservateur(observateur);
+    }
+
+    /**
+     * Rejoue une sauvegarde dans une partie à part, avec les règles habituelles : statut et indices
+     * sont recalculés, et une sauvegarde impossible est refusée sans toucher à cette partie.
+     *
+     * @param sauvegarde partie à rejouer
+     * @return la partie rejouée, dans l'état où elle a été sauvegardée
+     * @throws IllegalArgumentException si les règles refusent une des actions rejouées
+     */
+    private static Partie rejouer(PartieSauvegardee sauvegarde) {
+        Configuration configurationSauvegardee = sauvegarde.configuration();
+        Partie rejouee = new Partie(configurationSauvegardee, (longueur, graine) -> sauvegarde.secrete());
+        try {
+            rejouee.lancer(configurationSauvegardee, OptionalLong.empty());
+            for (Combinaison tentative : sauvegarde.tentatives()) {
+                tentative.couleurs().forEach(rejouee::poserCouleur);
+                rejouee.validerTentative();
+            }
+            sauvegarde.proposition().couleurs().forEach(rejouee::poserCouleur);
+        } catch (IllegalStateException e) {
+            throw new IllegalArgumentException("sauvegarde incohérente : " + e.getMessage(), e);
+        }
+        return rejouee;
     }
 
     /**

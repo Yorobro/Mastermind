@@ -368,6 +368,102 @@ class PartieTest {
         assertEquals(EtatPartie.initial(Configuration.STANDARD), partie.getEtat());
     }
 
+    @Test
+    void exporter_avantLancement_estRefuse() {
+        assertThrows(IllegalStateException.class, partie::exporter);
+    }
+
+    @Test
+    void exporter_contientLaSecreteLesTentativesEtLaProposition() {
+        partie.lancer(Configuration.STANDARD, OptionalLong.empty());
+        proposer(partie, RATEE);
+        partie.validerTentative();
+        partie.poserCouleur(Couleur.ROUGE);
+
+        assertEquals(new PartieSauvegardee(Configuration.STANDARD, SECRETE, List.of(RATEE),
+                new Combinaison(List.of(Couleur.ROUGE))), partie.exporter());
+    }
+
+    @Test
+    void restaurer_partieEnCours_retrouveLEtatSansReveler() {
+        partie.lancer(Configuration.STANDARD, OptionalLong.empty());
+        proposer(partie, RATEE);
+        partie.validerTentative();
+        partie.poserCouleur(Couleur.ROUGE);
+        PartieSauvegardee sauvegarde = partie.exporter();
+        EtatPartie attendu = partie.getEtat();
+        Partie autre = new Partie(Difficulte.FACILE.configuration(), (longueur, graine) -> RATEE);
+
+        autre.restaurer(sauvegarde);
+
+        assertEquals(attendu, autre.getEtat());
+        assertEquals(Combinaison.vide(), autre.getEtat().secrete());
+    }
+
+    @Test
+    void restaurer_permetDeContinuerLaPartie() {
+        partie.restaurer(new PartieSauvegardee(Configuration.STANDARD, SECRETE, List.of(RATEE), Combinaison.vide()));
+
+        proposer(partie, SECRETE);
+        partie.validerTentative();
+
+        assertEquals(Statut.GAGNEE, partie.getEtat().statut());
+        assertEquals(List.of(new Indice(0, 0), new Indice(4, 0)), partie.getEtat().indices());
+    }
+
+    @Test
+    void restaurer_partieGagnee_recalculeLeStatutEtRevele() {
+        partie.restaurer(new PartieSauvegardee(Configuration.STANDARD, SECRETE, List.of(SECRETE), Combinaison.vide()));
+
+        assertEquals(Statut.GAGNEE, partie.getEtat().statut());
+        assertEquals(SECRETE, partie.getEtat().secrete());
+    }
+
+    @Test
+    void restaurer_partiePerdue_recalculeLeStatut() {
+        Configuration unEssai = new Configuration(4, 1);
+
+        partie.restaurer(new PartieSauvegardee(unEssai, SECRETE, List.of(RATEE), Combinaison.vide()));
+
+        assertEquals(Statut.PERDUE, partie.getEtat().statut());
+        assertEquals(unEssai, partie.getEtat().configuration());
+    }
+
+    @Test
+    void restaurer_notifieUneSeuleFois() {
+        List<EtatPartie> recus = new ArrayList<>();
+        partie.ajouterObservateur(recus::add);
+
+        partie.restaurer(new PartieSauvegardee(Configuration.STANDARD, SECRETE, List.of(RATEE, RATEE), Combinaison.vide()));
+
+        assertEquals(List.of(partie.getEtat()), recus);
+    }
+
+    @Test
+    void restaurer_tentativeApresVictoire_estRefuseeSansChangerLaPartie() {
+        partie.lancer(Configuration.STANDARD, OptionalLong.empty());
+        EtatPartie avant = partie.getEtat();
+        List<EtatPartie> recus = new ArrayList<>();
+        partie.ajouterObservateur(recus::add);
+
+        assertThrows(IllegalArgumentException.class, () -> partie.restaurer(new PartieSauvegardee(
+                Configuration.STANDARD, SECRETE, List.of(SECRETE, RATEE), Combinaison.vide())));
+
+        assertEquals(avant, partie.getEtat());
+        assertEquals(List.of(), recus);
+    }
+
+    @Test
+    void restaurer_propositionApresLaFin_estRefusee() {
+        assertThrows(IllegalArgumentException.class, () -> partie.restaurer(new PartieSauvegardee(
+                Configuration.STANDARD, SECRETE, List.of(SECRETE), new Combinaison(List.of(Couleur.ROUGE)))));
+    }
+
+    @Test
+    void restaurer_sansSauvegarde_estRefuse() {
+        assertThrows(NullPointerException.class, () -> partie.restaurer(null));
+    }
+
     /**
      * Crée une partie au générateur factice et la lance avec la configuration donnée.
      *

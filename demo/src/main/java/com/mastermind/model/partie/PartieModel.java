@@ -47,6 +47,26 @@ public interface PartieModel extends Observable<EtatPartie> {
     void validerTentative();
 
     /**
+     * Prend une photo complète de la partie, combinaison secrète comprise, pour la sauvegarder.
+     *
+     * @return la partie à sauvegarder, en cours ou terminée
+     * @throws IllegalStateException si aucune partie n'a été lancée
+     */
+    PartieSauvegardee exporter();
+
+    /**
+     * Remplace la partie courante par une partie sauvegardée, en rejouant ses tentatives :
+     * statut et indices sont recalculés avec les règles du jeu. Les observateurs sont notifiés une fois.
+     *
+     * @param sauvegarde partie à reprendre
+     * @throws NullPointerException     si {@code sauvegarde} est {@code null}
+     * @throws IllegalArgumentException si la sauvegarde ne correspond à aucune partie possible
+     *                                  (par exemple une tentative après la victoire) ; la partie courante
+     *                                  reste alors inchangée
+     */
+    void restaurer(PartieSauvegardee sauvegarde);
+
+    /**
      * Renvoie l'état courant, celui transmis lors de la dernière notification.
      *
      * @return instantané immuable de la partie
