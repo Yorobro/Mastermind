@@ -2,7 +2,14 @@
 
 Jeu de Mastermind en JavaFX, construit en MVC avec le patron Observer. Le joueur devine une combinaison secrète de couleurs en un nombre limité d'essais, guidé par des indices (pions bien placés / mal placés).
 
-> État actuel : jeu complet. Lancement avec graine et difficulté, saisie et correction des tentatives, indices selon la règle officielle, victoire et défaite, combinaison secrète révélée en fin de partie, sauvegarde et chargement d'une partie au format JSON.
+> État actuel : jeu complet. Écran d'accueil (lancer une partie avec sa difficulté, charger une sauvegarde, quitter), saisie et correction des tentatives, indices selon la règle officielle, victoire et défaite, combinaison secrète révélée en fin de partie, sauvegarde au format JSON, retour à l'accueil en fin de partie.
+
+## Écrans
+
+| Écran | Contenu |
+|---|---|
+| Accueil (`MenuView`) | Choix de la difficulté, **Lancer la partie**, **Charger une partie**, **Quitter** |
+| Partie (`PlateauView`) | Plateau, statut, palette, **Retirer**, **Valider**, **Sauvegarder** ; **Retour au menu** apparaît une fois la partie terminée |
 
 ## Stack
 
@@ -48,9 +55,10 @@ com.mastermind
 │   └── sauvegarde           SauvegardePartie, ChargementPartie (ports), ErreurSauvegarde
 ├── data                     FichierJsonPartie, ConvertisseurPartieJson, PartieJson
 ├── controller               PartieController
-└── view                     ActionsJoueur, VuePartie, PlateauView, DialoguesFichier
+└── view                     FenetrePrincipale, MenuView, PlateauView, VuePartie,
+    │                        ActionsMenu, ActionsPartie, DialoguesFichier, OperationFichier
     └── component
-        ├── atoms            Bouton, BoutonCouleur, ChampTexte, ChoixDifficulte, Case, Indice, EtatIndice,
+        ├── atoms            Bouton, BoutonCouleur, ChoixDifficulte, Case, Indice, EtatIndice,
         │                    StatutPartie, PseudoClasses
         ├── molecules        LignePions, GrilleIndices
         └── organisms        LigneTentative
@@ -65,10 +73,12 @@ Ressources : `demo/src/main/resources/com/mastermind/view/mastermind.css`.
 - **Un seul point de changement d'état.** `Partie.changerEtat` remplace l'état et notifie : aucune modification n'échappe aux observateurs.
 - **État immuable.** `EtatPartie` est un instantané (record) : c'est la seule chose que la vue lit, elle n'accède jamais à `Partie`. Il porte la configuration : la vue dimensionne le plateau à partir de l'état reçu.
 - **Secrète cachée.** L'état publié contient une combinaison vide tant que la partie est en cours ; seule `PartieSauvegardee`, réservée à la sauvegarde, contient la vraie secrète.
-- **La vue n'autorise que le possible.** Palette, Effacer, Valider et Sauvegarder ne sont actifs que si le modèle accepte l'action dans l'état courant.
+- **La vue n'autorise que le possible.** Palette, Retirer, Valider et Sauvegarder ne sont actifs que si le modèle accepte l'action dans l'état courant.
+- **Un contrat d'actions par écran.** L'accueil ne voit que `ActionsMenu` (lancer, charger), le plateau que `ActionsPartie` (couleur, retirer, valider, sauvegarder) ; `PartieController` implémente les deux.
+- **Navigation par événements.** Les écrans ne se connaissent pas et ignorent comment on navigue : ils signalent `setOnPartieDemarree`, `setOnQuitter`, `setOnRetourMenu`. `FenetrePrincipale` ne fait qu'afficher un écran à la fois ; `Main` relie les événements à la navigation.
 - **Ports et adaptateurs.** Le modèle définit les ports `SauvegardePartie` et `ChargementPartie` ; le package `data` les implémente. Le modèle ne dépend d'aucune technologie de stockage.
-- **Inversion de dépendance.** Le contrôleur dépend de `PartieModel` et des ports, la vue de `ActionsJoueur`, la partie de `GenerateurCombinaison`. Seul `Main` fait des `new` concrets (racine de composition).
-- **Hasard injecté.** `GenerateurCombinaison` est une interface : `GenerateurAleatoire` en production, une lambda fixe dans les tests. Une graine permet de rejouer la même combinaison.
+- **Inversion de dépendance.** Le contrôleur dépend de `PartieModel` et des ports, les écrans de `ActionsMenu` et `ActionsPartie`, la partie de `GenerateurCombinaison`. Seul `Main` fait des `new` concrets (racine de composition).
+- **Hasard injecté.** `GenerateurCombinaison` est une interface : `GenerateurAleatoire` en production, une lambda fixe dans les tests. Le modèle accepte une graine pour rejouer la même combinaison ; l'interface, elle, lance toujours une combinaison imprévisible.
 - **Le Java choisit l'état, le CSS décide du rendu.** `PseudoClasses` relie une valeur d'enum (`Couleur.ROUGE`, `EtatIndice.MAL_PLACE`) à une pseudo-classe CSS (`:rouge`, `:mal-place`). Le modèle ne contient aucune information de rendu, ni texte d'interface.
 - **Composants en atomic design.** atoms → molecules → organisms, chacun ne dépendant que du niveau inférieur.
 
@@ -138,20 +148,33 @@ classDiagram
     }
     class FichierJsonPartie
 
-    class ActionsJoueur {
+    class ActionsMenu {
         <<interface>>
-        +lancerPartie(String graine, Difficulte)
+        +lancerPartie(Difficulte)
+        +charger(Path)
+    }
+    class ActionsPartie {
+        <<interface>>
         +choisirCouleur(Couleur)
-        +effacer()
+        +retirerCouleur()
         +valider()
         +sauvegarder(Path)
-        +charger(Path)
     }
     class PartieController
     class VuePartie {
         <<interface>>
     }
-    class PlateauView
+    class MenuView {
+        +setOnPartieDemarree(Runnable)
+        +setOnQuitter(Runnable)
+    }
+    class PlateauView {
+        +setOnRetourMenu(Runnable)
+    }
+    class FenetrePrincipale {
+        +afficherMenu()
+        +afficherPartie()
+    }
 
     Sujet ..|> Observable
     Observable ..> Observateur
@@ -165,13 +188,37 @@ classDiagram
     FichierJsonPartie ..|> SauvegardePartie
     FichierJsonPartie ..|> ChargementPartie
 
-    PartieController ..|> ActionsJoueur
+    PartieController ..|> ActionsMenu
+    PartieController ..|> ActionsPartie
     PartieController --> PartieModel
     PartieController --> SauvegardePartie
     PartieController --> ChargementPartie
     VuePartie --|> Observateur
     PlateauView ..|> VuePartie
-    PlateauView --> ActionsJoueur
+    PlateauView --> ActionsPartie
+    MenuView --> ActionsMenu
+    FenetrePrincipale --> MenuView
+    FenetrePrincipale --> PlateauView
+```
+
+### Flux : de l'accueil à la partie
+
+```mermaid
+sequenceDiagram
+    actor Joueur
+    participant A as MenuView
+    participant C as PartieController
+    participant M as Partie
+    participant P as PlateauView
+    participant F as FenetrePrincipale
+
+    Joueur->>A: choisit « Difficile », clic « Lancer la partie »
+    A->>C: ActionsMenu.lancerPartie(DIFFICILE)
+    C->>M: lancer(configuration 4 × 8, sans graine)
+    M-->>P: mettreAJour(EtatPartie) : plateau de 8 lignes
+    A->>F: événement « partie démarrée » (relié dans Main)
+    F->>F: affiche le plateau, ajuste et recentre la fenêtre
+    Note over P,F: en fin de partie, « Retour au menu » → FenetrePrincipale.afficherMenu()
 ```
 
 ### Flux : jouer une tentative
@@ -184,11 +231,11 @@ sequenceDiagram
     participant M as Partie
 
     Joueur->>V: clic sur une couleur de la palette
-    V->>C: ActionsJoueur.choisirCouleur(ROUGE)
+    V->>C: ActionsPartie.choisirCouleur(ROUGE)
     C->>M: PartieModel.poserCouleur(ROUGE)
     M-->>V: mettreAJour(EtatPartie) : la couleur apparaît sur la ligne en cours
     Joueur->>V: clic « Valider » (actif quand la ligne est pleine)
-    V->>C: ActionsJoueur.valider()
+    V->>C: ActionsPartie.valider()
     C->>M: PartieModel.validerTentative()
     M->>M: Indice.evaluer(proposition, secrète), statut suivant
     M-->>V: mettreAJour(EtatPartie) : indices affichés, ligne suivante prête
@@ -199,28 +246,30 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Joueur
-    participant V as PlateauView
+    participant P as PlateauView
+    participant A as MenuView
     participant C as PartieController
     participant M as Partie
     participant D as FichierJsonPartie
 
-    Joueur->>V: clic « Sauvegarder », choisit save.json
-    V->>C: ActionsJoueur.sauvegarder(chemin)
+    Joueur->>P: clic « Sauvegarder », choisit save.json
+    P->>C: ActionsPartie.sauvegarder(chemin)
     C->>M: exporter()
     M-->>C: PartieSauvegardee (secrète comprise)
     C->>D: SauvegardePartie.sauvegarder(partie, chemin)
     D->>D: conversion en PartieJson, écriture via fichier temporaire
 
-    Joueur->>V: clic « Charger », choisit un fichier
-    V->>C: ActionsJoueur.charger(chemin)
+    Joueur->>A: clic « Charger une partie », choisit un fichier
+    A->>C: ActionsMenu.charger(chemin)
     C->>D: ChargementPartie.charger(chemin)
     D-->>C: PartieSauvegardee
     C->>M: restaurer(partie)
     M->>M: rejoue les tentatives : statut et indices recalculés
-    M-->>V: mettreAJour(EtatPartie)
+    M-->>P: mettreAJour(EtatPartie)
+    A->>A: chargement réussi : événement « partie démarrée », le plateau s'affiche
 ```
 
-Le fichier ne contient que les données de base ; le statut et les indices sont recalculés au chargement, donc un fichier modifié à la main ne peut pas produire une partie incohérente. Toute erreur (fichier illisible, JSON invalide, partie impossible) remonte en `ErreurSauvegarde` et la vue l'affiche dans une boîte de dialogue ; la partie courante reste alors inchangée.
+Le fichier ne contient que les données de base ; le statut et les indices sont recalculés au chargement, donc un fichier modifié à la main ne peut pas produire une partie incohérente. Toute erreur (fichier illisible, JSON invalide, partie impossible) remonte en `ErreurSauvegarde` et `DialoguesFichier` l'affiche dans une boîte de dialogue ; la partie courante reste alors inchangée et l'accueil reste affiché.
 
 Format du fichier :
 
@@ -245,7 +294,7 @@ Format du fichier :
 | `model.partie` | `model.combinaison`, `model.generation`, `observer` | `model.sauvegarde`, `view`, `controller`, `data`, JavaFX |
 | `model.sauvegarde` | `model.partie` | `view`, `controller`, `data`, JavaFX |
 | `data` | `model`, Gson | `view`, `controller`, JavaFX |
-| `controller` | `model` (interfaces et ports), `view.ActionsJoueur` | vue concrète, `data`, JavaFX |
+| `controller` | `model` (interfaces et ports), `view.ActionsMenu`, `view.ActionsPartie` | écrans concrets, `data`, JavaFX |
 | `view.component.atoms` | `model` (records et enums), JavaFX | molecules, organisms, `view` |
 | `view.component.molecules` | atoms | organisms, `view` |
 | `view.component.organisms` | molecules (et atoms) | `view` |
@@ -264,7 +313,7 @@ Format du fichier :
 | `ConfigurationTest`, `DifficulteTest` | Paramètres de partie et niveaux de difficulté |
 | `GenerateurAleatoireTest` | Longueur demandée, même graine → même combinaison |
 | `FichierJsonPartieTest` | Aller-retour par fichier, format JSON, remplacement sans fichier temporaire résiduel, erreurs (fichier absent, vide, corrompu, version, couleur, champ manquant) |
-| `PartieControllerTest` | Conversion de la saisie et transmission des actions, avec un modèle espion et de faux ports de sauvegarde |
+| `PartieControllerTest` | Transmission des actions de l'accueil et du plateau, avec un modèle espion et de faux ports de sauvegarde |
 
 La vue JavaFX n'est pas testée automatiquement.
 
@@ -276,6 +325,7 @@ La vue JavaFX n'est pas testée automatiquement.
 - **Ajouter une source de combinaison** (saisie par un joueur, fichier...) : implémenter `GenerateurCombinaison` et l'injecter dans `Main`.
 - **Ajouter un autre stockage** (base de données, autre format...) : implémenter `SauvegardePartie` et `ChargementPartie`, puis les injecter dans `Main`. Modèle et contrôleur ne changent pas.
 - **Faire évoluer le format JSON** : incrémenter `ConvertisseurPartieJson.VERSION` ; les fichiers d'une autre version sont refusés avec un message clair.
+- **Ajouter un écran** (règles, scores...) : créer la vue, lui donner des événements `setOn...`, l'ajouter à `FenetrePrincipale` et relier ses événements dans `Main`. Les autres écrans ne changent pas.
 - **Ajouter une autre vue** (console...) : implémenter `VuePartie`, l'abonner au modèle dans `Main`. Contrôleur et modèle ne changent pas.
 
 ## Conventions de code
@@ -297,6 +347,5 @@ Convention d'équipe, vérifiée à la relecture :
 
 ## Feuille de route
 
-- **Contrôle d'entrée** : `PartieController` doit valider lui-même la graine au lieu de compter sur le filtre de la vue.
 - **Sauvegarde** : la combinaison secrète est écrite en clair dans le fichier ; la masquer si la triche devient un sujet.
 - **Vue** : afficher le nombre d'essais restants ; tester la vue automatiquement.
