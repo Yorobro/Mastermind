@@ -6,17 +6,18 @@ import com.mastermind.model.partie.PartieModel;
 import com.mastermind.model.sauvegarde.ChargementPartie;
 import com.mastermind.model.sauvegarde.ErreurSauvegarde;
 import com.mastermind.model.sauvegarde.SauvegardePartie;
-import com.mastermind.view.ActionsJoueur;
+import com.mastermind.view.ActionsMenu;
+import com.mastermind.view.ActionsPartie;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.OptionalLong;
 
 /**
- * Contrôleur : traduit les intentions du joueur en appels au modèle.
+ * Contrôleur : traduit les intentions du joueur, depuis l'accueil comme depuis le plateau, en appels au modèle.
  * Il ne met jamais la vue à jour lui-même : c'est la vue qui observe le modèle.
  * Pour la sauvegarde, il fait le lien entre le modèle et les ports, sans savoir comment ils stockent la partie.
  */
-public class PartieController implements ActionsJoueur {
+public class PartieController implements ActionsMenu, ActionsPartie {
     private final PartieModel model;
     private final SauvegardePartie sauvegarde;
     private final ChargementPartie chargement;
@@ -36,8 +37,8 @@ public class PartieController implements ActionsJoueur {
     }
 
     @Override
-    public void lancerPartie(String graine, Difficulte difficulte) {
-        model.lancer(difficulte.configuration(), versGraine(graine));
+    public void lancerPartie(Difficulte difficulte) {
+        model.lancer(difficulte.configuration(), OptionalLong.empty());
     }
 
     @Override
@@ -46,7 +47,7 @@ public class PartieController implements ActionsJoueur {
     }
 
     @Override
-    public void effacer() {
+    public void retirerCouleur() {
         model.retirerCouleur();
     }
 
@@ -67,17 +68,5 @@ public class PartieController implements ActionsJoueur {
         } catch (IllegalArgumentException e) {
             throw new ErreurSauvegarde("La sauvegarde ne correspond à aucune partie possible", e);
         }
-    }
-
-    /**
-     * Convertit la saisie de l'interface en donnée métier.
-     *
-     * @param saisie texte saisi par le joueur
-     * @return la graine, ou vide si la saisie ne contient que des blancs
-     * @throws NumberFormatException si la saisie n'est ni vide ni un entier {@code long}
-     */
-    private static OptionalLong versGraine(String saisie) {
-        String texte = saisie.strip();
-        return texte.isEmpty() ? OptionalLong.empty() : OptionalLong.of(Long.parseLong(texte));
     }
 }
