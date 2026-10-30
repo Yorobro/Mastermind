@@ -42,13 +42,29 @@
     -fx-font-size: 14px;
 }
 
-.commandes {
+.actions-tentative {
     -fx-spacing: 8;
     -fx-alignment: center;
 }
 
-.champ-texte {
-    -fx-pref-column-count: 12;
+/* ===== Accueil ===== */
+
+.menu {
+    -fx-background-color: #f4ede1;
+    -fx-padding: 32 48;
+    -fx-spacing: 12;
+    -fx-alignment: center;
+}
+
+.titre {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4e342e;
+}
+
+.menu .button,
+.menu .choix-difficulte {
+    -fx-pref-width: 200;
 }
 
 /* ===== Case (pion) ===== */

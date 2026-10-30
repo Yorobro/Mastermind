@@ -5,44 +5,35 @@ import com.mastermind.model.combinaison.Indice;
 import com.mastermind.model.partie.Configuration;
 import com.mastermind.model.partie.EtatPartie;
 import com.mastermind.model.partie.Statut;
-import com.mastermind.model.sauvegarde.ErreurSauvegarde;
 import com.mastermind.view.component.atoms.Bouton;
 import com.mastermind.view.component.atoms.BoutonCouleur;
-import com.mastermind.view.component.atoms.ChampTexte;
-import com.mastermind.view.component.atoms.ChoixDifficulte;
 import com.mastermind.view.component.atoms.StatutPartie;
 import com.mastermind.view.component.molecules.LignePions;
 import com.mastermind.view.component.organisms.LigneTentative;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 /**
- * Vue JavaFX : assemble les composants et se met à jour à chaque notification du modèle.
- * Ne connaît ni le contrôleur concret ni le modèle concret.
+ * Écran de jeu : plateau, palette et actions sur la tentative ; se met à jour à chaque notification du modèle.
+ * Ne connaît ni le contrôleur concret ni le modèle concret. En fin de partie, il propose de revenir au menu
+ * et le signale, sans savoir comment l'accueil est affiché.
  */
 public final class PlateauView extends VBox implements VuePartie {
-    private static final String FEUILLE_DE_STYLE = Objects.requireNonNull(
-            PlateauView.class.getResource("mastermind.css"), "mastermind.css introuvable").toExternalForm();
-    /**
-     * Chiffres uniquement, 18 au plus : toujours convertible en {@code long}.
-     */
-    private static final String FORMAT_GRAINE = "\\d{0,18}";
+    private static final Runnable AUCUNE_REACTION = () -> { };
 
     private final StatutPartie statut = new StatutPartie();
-    private final ChampTexte champGraine = new ChampTexte("Graine (optionnelle)", t -> t.matches(FORMAT_GRAINE));
-    private final ChoixDifficulte choixDifficulte = new ChoixDifficulte();
     private final VBox plateauJeu = new VBox();
-    private final DialoguesFichier dialogues = new DialoguesFichier();
+    private final DialoguesFichier dialogues;
     private final HBox palette;
-    private final Bouton boutonEffacer;
+    private final Bouton boutonRetirer;
     private final Bouton boutonValider;
     private final Bouton boutonSauvegarder;
+    private final Bouton boutonRetourMenu;
+    private Runnable surRetourMenu = AUCUNE_REACTION;
 
     /**
      * Dimensions du plateau actuellement dessiné ; {@code null} avant le premier affichage.
@@ -55,33 +46,41 @@ public final class PlateauView extends VBox implements VuePartie {
     private List<LigneTentative> tentatives = List.of();
 
     /**
-     * Construit le plateau : zone de jeu, statut, commandes, palette et actions.
+     * Construit l'écran de jeu : zone de jeu, statut, palette et actions.
      * La zone de jeu est dessinée au premier {@link #mettreAJour(EtatPartie)}, aux dimensions de l'état reçu.
      *
-     * @param actions destinataire des actions du joueur
+     * @param actions   destinataire des actions du joueur
+     * @param dialogues dialogues de choix du fichier de sauvegarde
+     * @throws NullPointerException si l'un des arguments est {@code null}
      */
-    public PlateauView(ActionsJoueur actions) {
-        getStylesheets().add(FEUILLE_DE_STYLE);
+    public PlateauView(ActionsPartie actions, DialoguesFichier dialogues) {
+        Objects.requireNonNull(actions);
+        this.dialogues = Objects.requireNonNull(dialogues);
         getStyleClass().add("plateau");
         plateauJeu.getStyleClass().add("plateau-jeu");
         palette = creerPalette(actions);
-        boutonEffacer = new Bouton("Effacer", actions::effacer);
+        boutonRetirer = new Bouton("Retirer", actions::retirerCouleur);
         boutonValider = new Bouton("Valider", actions::valider);
-        boutonSauvegarder = new Bouton("Sauvegarder", () -> sauvegarder(actions));
-        getChildren().addAll(
-                plateauJeu,
-                statut,
-                creerCommandes(actions),
-                palette,
-                creerBoutonsAction(actions)
-        );
+        boutonSauvegarder = new Bouton("Sauvegarder", () -> dialogues.sauvegarder(fenetre(), actions::sauvegarder));
+        boutonRetourMenu = new Bouton("Retour au menu", () -> surRetourMenu.run());
+        boutonRetourMenu.managedProperty().bind(boutonRetourMenu.visibleProperty());
+        getChildren().addAll(plateauJeu, statut, palette, creerBoutonsAction());
+    }
+
+    /**
+     * Définit la réaction au bouton « Retour au menu », proposé une fois la partie terminée.
+     *
+     * @param reaction exécutée quand le joueur demande à revenir au menu
+     * @throws NullPointerException si {@code reaction} est {@code null}
+     */
+    public void setOnRetourMenu(Runnable reaction) {
+        surRetourMenu = Objects.requireNonNull(reaction);
     }
 
     @Override
     public void mettreAJour(EtatPartie etat) {
         adapterPlateau(etat.configuration());
         statut.afficher(etat.statut());
-        champGraine.setVisible(etat.statut() != Statut.EN_COURS);
         ligneSecrete.afficher(etat.secrete().couleurs());
         afficherTentatives(etat);
         activerActionsPossibles(etat);
@@ -105,17 +104,6 @@ public final class PlateauView extends VBox implements VuePartie {
         lignes.getStyleClass().add("tentatives");
         lignes.getChildren().addAll(tentatives);
         plateauJeu.getChildren().setAll(ligneSecrete, lignes);
-        ajusterFenetre();
-    }
-
-    /**
-     * Redimensionne la fenêtre à son contenu, pour que toutes les lignes restent visibles.
-     */
-    private void ajusterFenetre() {
-        Window fenetre = fenetre();
-        if (fenetre != null) {
-            fenetre.sizeToScene();
-        }
     }
 
     /**
@@ -141,7 +129,7 @@ public final class PlateauView extends VBox implements VuePartie {
 
     /**
      * Active seulement les actions que le modèle accepte dans cet état : le joueur ne peut
-     * déclencher aucune action refusée.
+     * déclencher aucune action refusée. Le retour au menu n'apparaît qu'en fin de partie.
      *
      * @param etat état courant de la partie
      */
@@ -150,53 +138,16 @@ public final class PlateauView extends VBox implements VuePartie {
         int longueur = etat.configuration().longueur();
         int nbPionsPoses = etat.proposition().taille();
         palette.setDisable(!enCours || nbPionsPoses == longueur);
-        boutonEffacer.setDisable(!enCours || nbPionsPoses == 0);
+        boutonRetirer.setDisable(!enCours || nbPionsPoses == 0);
         boutonValider.setDisable(!enCours || nbPionsPoses < longueur);
         boutonSauvegarder.setDisable(etat.statut() == Statut.NON_COMMENCEE);
-    }
-
-    /**
-     * Demande où sauvegarder, puis transmet le fichier choisi ; une erreur est affichée au joueur.
-     *
-     * @param actions destinataire des actions du joueur
-     */
-    private void sauvegarder(ActionsJoueur actions) {
-        Optional<Path> fichier = dialogues.demanderEmplacementSauvegarde(fenetre());
-        executerSurFichier(fichier, actions::sauvegarder, "Sauvegarde impossible");
-    }
-
-    /**
-     * Demande quelle sauvegarde charger, puis transmet le fichier choisi ; une erreur est affichée au joueur.
-     *
-     * @param actions destinataire des actions du joueur
-     */
-    private void charger(ActionsJoueur actions) {
-        Optional<Path> fichier = dialogues.demanderFichierACharger(fenetre());
-        executerSurFichier(fichier, actions::charger, "Chargement impossible");
-    }
-
-    /**
-     * Exécute une opération sur le fichier choisi, sauf si le joueur a annulé.
-     *
-     * @param fichier     fichier choisi, ou vide si le joueur a annulé
-     * @param operation   sauvegarde ou chargement
-     * @param titreErreur résumé affiché si l'opération échoue
-     */
-    private void executerSurFichier(Optional<Path> fichier, OperationFichier operation, String titreErreur) {
-        if (fichier.isEmpty()) {
-            return;
-        }
-        try {
-            operation.executer(fichier.get());
-        } catch (ErreurSauvegarde erreur) {
-            dialogues.afficherErreur(fenetre(), titreErreur, erreur);
-        }
+        boutonRetourMenu.setVisible(etat.statut().estTerminee());
     }
 
     /**
      * Renvoie la fenêtre qui contient le plateau, parent des dialogues.
      *
-     * @return la fenêtre, ou {@code null} si le plateau n'est pas encore affiché
+     * @return la fenêtre, ou {@code null} si le plateau n'est pas affiché
      */
     private Window fenetre() {
         return getScene() == null ? null : getScene().getWindow();
@@ -227,70 +178,28 @@ public final class PlateauView extends VBox implements VuePartie {
     }
 
     /**
-     * Assemble la barre de commandes : champ de graine, choix de la difficulté et bouton de lancement,
-     * reliés à {@link ActionsJoueur#lancerPartie(String, com.mastermind.model.partie.Difficulte)}.
-     *
-     * @param actions destinataire des actions du joueur
-     * @return la barre de commandes
-     */
-    private HBox creerCommandes(ActionsJoueur actions) {
-        champGraine.setOnValider(graine ->
-                actions.lancerPartie(graine, choixDifficulte.getValue())
-        );
-        Bouton boutonLancer = new Bouton("Lancer partie", () ->
-                actions.lancerPartie(champGraine.getText(), choixDifficulte.getValue())
-        );
-        HBox commandes = new HBox(champGraine, choixDifficulte, boutonLancer);
-        commandes.getStyleClass().add("commandes");
-        return commandes;
-    }
-
-    /**
      * Assemble la palette : un bouton par couleur.
      *
      * @param actions destinataire des actions du joueur
      * @return la palette de couleurs
      */
-    private static HBox creerPalette(ActionsJoueur actions) {
+    private static HBox creerPalette(ActionsPartie actions) {
         HBox palette = new HBox();
         palette.getStyleClass().add("palette");
         for (Couleur couleur : Couleur.values()) {
-            palette.getChildren().add(new BoutonCouleur(couleur, () ->
-                    actions.choisirCouleur(couleur)
-            ));
+            palette.getChildren().add(new BoutonCouleur(couleur, () -> actions.choisirCouleur(couleur)));
         }
         return palette;
     }
 
-
     /**
-     * Assemble la barre d'actions : effacer et valider la tentative, sauvegarder et charger la partie.
+     * Assemble la barre d'actions : retirer et valider la tentative, sauvegarder la partie, revenir au menu.
      *
-     * @param actions destinataire des actions du joueur
      * @return la barre d'actions
      */
-    private HBox creerBoutonsAction(ActionsJoueur actions) {
-        HBox actionsTentative = new HBox(
-                boutonEffacer,
-                boutonValider,
-                boutonSauvegarder,
-                new Bouton("Charger", () -> charger(actions))
-        );
+    private HBox creerBoutonsAction() {
+        HBox actionsTentative = new HBox(boutonRetirer, boutonValider, boutonSauvegarder, boutonRetourMenu);
         actionsTentative.getStyleClass().add("actions-tentative");
         return actionsTentative;
-    }
-
-    /**
-     * Sauvegarde ou chargement appliqué au fichier choisi par le joueur.
-     */
-    @FunctionalInterface
-    private interface OperationFichier {
-        /**
-         * Applique l'opération au fichier.
-         *
-         * @param fichier fichier choisi par le joueur
-         * @throws ErreurSauvegarde si l'opération échoue
-         */
-        void executer(Path fichier) throws ErreurSauvegarde;
     }
 }

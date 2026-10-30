@@ -10,10 +10,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
 /**
- * Fenêtres de dialogue de la sauvegarde : choix du fichier et affichage des erreurs.
- * Retient le dernier dossier utilisé pour y rouvrir le sélecteur.
+ * Dialogues de la sauvegarde, partagés par l'accueil et le plateau : choix du fichier, exécution de l'opération
+ * et affichage de l'erreur éventuelle. Retient le dernier dossier utilisé, d'un écran à l'autre.
  */
-final class DialoguesFichier {
+public final class DialoguesFichier {
     private static final String NOM_PAR_DEFAUT = "save.json";
     private static final FileChooser.ExtensionFilter FILTRE_JSON =
             new FileChooser.ExtensionFilter("Partie Mastermind (*.json)", "*.json");
@@ -24,25 +24,58 @@ final class DialoguesFichier {
     private File dernierDossier;
 
     /**
-     * Demande où enregistrer la partie, en proposant {@value #NOM_PAR_DEFAUT}.
-     *
-     * @param parent fenêtre au-dessus de laquelle s'ouvre le dialogue
-     * @return le fichier choisi, ou vide si le joueur a annulé
+     * Crée les dialogues ; le premier sélecteur s'ouvre dans le dossier par défaut du système.
      */
-    Optional<Path> demanderEmplacementSauvegarde(Window parent) {
-        FileChooser selecteur = creerSelecteur("Sauvegarder la partie");
-        selecteur.setInitialFileName(NOM_PAR_DEFAUT);
-        return retenir(selecteur.showSaveDialog(parent));
+    public DialoguesFichier() {
     }
 
     /**
-     * Demande quelle sauvegarde charger.
+     * Demande où enregistrer la partie, en proposant {@value #NOM_PAR_DEFAUT}, puis l'enregistre.
      *
-     * @param parent fenêtre au-dessus de laquelle s'ouvre le dialogue
-     * @return le fichier choisi, ou vide si le joueur a annulé
+     * @param parent     fenêtre au-dessus de laquelle s'ouvrent les dialogues
+     * @param sauvegarde opération qui enregistre la partie dans le fichier choisi
+     * @return {@code true} si la partie a été enregistrée ; {@code false} si le joueur a annulé ou si l'erreur
+     *         lui a été affichée
      */
-    Optional<Path> demanderFichierACharger(Window parent) {
-        return retenir(creerSelecteur("Charger une partie").showOpenDialog(parent));
+    boolean sauvegarder(Window parent, OperationFichier sauvegarde) {
+        FileChooser selecteur = creerSelecteur("Sauvegarder la partie");
+        selecteur.setInitialFileName(NOM_PAR_DEFAUT);
+        return retenir(selecteur.showSaveDialog(parent))
+                .map(fichier -> appliquer(parent, fichier, sauvegarde, "Sauvegarde impossible"))
+                .orElse(false);
+    }
+
+    /**
+     * Demande quelle sauvegarde reprendre, puis la charge.
+     *
+     * @param parent     fenêtre au-dessus de laquelle s'ouvrent les dialogues
+     * @param chargement opération qui reprend la partie enregistrée dans le fichier choisi
+     * @return {@code true} si la partie a été chargée ; {@code false} si le joueur a annulé ou si l'erreur
+     *         lui a été affichée
+     */
+    boolean charger(Window parent, OperationFichier chargement) {
+        return retenir(creerSelecteur("Charger une partie").showOpenDialog(parent))
+                .map(fichier -> appliquer(parent, fichier, chargement, "Chargement impossible"))
+                .orElse(false);
+    }
+
+    /**
+     * Exécute l'opération sur le fichier ; en cas d'échec, explique l'erreur au joueur.
+     *
+     * @param parent      fenêtre au-dessus de laquelle s'ouvre le message d'erreur
+     * @param fichier     fichier choisi
+     * @param operation   sauvegarde ou chargement
+     * @param titreErreur résumé affiché si l'opération échoue
+     * @return {@code true} si l'opération a réussi
+     */
+    private static boolean appliquer(Window parent, Path fichier, OperationFichier operation, String titreErreur) {
+        try {
+            operation.executer(fichier);
+            return true;
+        } catch (ErreurSauvegarde erreur) {
+            afficherErreur(parent, titreErreur, erreur);
+            return false;
+        }
     }
 
     /**
@@ -52,7 +85,7 @@ final class DialoguesFichier {
      * @param titre  résumé de l'opération qui a échoué
      * @param erreur erreur dont le message est affiché
      */
-    void afficherErreur(Window parent, String titre, ErreurSauvegarde erreur) {
+    private static void afficherErreur(Window parent, String titre, ErreurSauvegarde erreur) {
         Alert alerte = new Alert(Alert.AlertType.ERROR, erreur.getMessage(), ButtonType.OK);
         alerte.initOwner(parent);
         alerte.setHeaderText(titre);

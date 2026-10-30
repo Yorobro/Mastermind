@@ -97,36 +97,22 @@ class PartieControllerTest {
     private final PartieController controleur = new PartieController(modele, sauvegardeEspionne, chargementFixe);
 
     @Test
-    void saisieVide_lanceSansGraine() {
-        controleur.lancerPartie("  ", Difficulte.FACILE);
+    void lancerPartie_lanceUneCombinaisonImprevisible() {
+        controleur.lancerPartie(Difficulte.FACILE);
 
         assertEquals(List.of(OptionalLong.empty()), modele.graines);
     }
 
     @Test
-    void saisieNumerique_lanceAvecCetteGraine() {
-        controleur.lancerPartie("42", Difficulte.FACILE);
-
-        assertEquals(List.of(OptionalLong.of(42)), modele.graines);
-    }
-
-    @Test
-    void saisieNonNumerique_estRefuseeSansLancer() {
-        assertThrows(IllegalArgumentException.class, () -> controleur.lancerPartie("abc", Difficulte.FACILE));
-
-        assertEquals(List.of(), modele.graines);
-    }
-
-    @Test
     void difficulteChoisie_lanceAvecSaConfiguration() {
-        controleur.lancerPartie("", Difficulte.DIFFICILE);
+        controleur.lancerPartie(Difficulte.DIFFICILE);
 
         assertEquals(List.of(Difficulte.DIFFICILE.configuration()), modele.configurations);
     }
 
     @Test
     void sansDifficulte_estRefuseSansLancer() {
-        assertThrows(NullPointerException.class, () -> controleur.lancerPartie("", null));
+        assertThrows(NullPointerException.class, () -> controleur.lancerPartie(null));
 
         assertEquals(List.of(), modele.configurations);
     }
@@ -139,8 +125,8 @@ class PartieControllerTest {
     }
 
     @Test
-    void effacer_retireLaDerniereCouleurDuModele() {
-        controleur.effacer();
+    void retirerCouleur_retireLaDerniereCouleurDuModele() {
+        controleur.retirerCouleur();
 
         assertEquals(List.of("retirerCouleur"), modele.appels);
     }
